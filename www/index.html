@@ -4111,38 +4111,7 @@ input[type="range"]::-moz-range-track {
     transform-origin: top left;
   }
 </style>
-<script>
-  (function () {
-    // window.Capacitor only exists inside the native wrapper (set by the
-    // Capacitor runtime itself) — never true on desktop Electron or when
-    // index.html is opened in an ordinary browser.
-    if (!window.Capacitor) return;
 
-    var REF_W = 1280, REF_H = 800; // matches the smallest desktop preset
-
-    function fitToScreen() {
-      var app = document.getElementById("app");
-      if (!app) return;
-      document.documentElement.classList.add("capacitor-fit");
-      document.body.classList.add("capacitor-fit");
-      app.classList.add("capacitor-fit");
-
-      var scale = Math.min(window.innerWidth / REF_W, window.innerHeight / REF_H, 1);
-      var offsetX = Math.max(0, (window.innerWidth - REF_W * scale) / 2);
-      var offsetY = Math.max(0, (window.innerHeight - REF_H * scale) / 2);
-
-      app.style.transform = "scale(" + scale + ")";
-      app.style.left = offsetX + "px";
-      app.style.top = offsetY + "px";
-    }
-
-    window.addEventListener("resize", fitToScreen);
-    window.addEventListener("orientationchange", function () {
-      setTimeout(fitToScreen, 200);
-    });
-    window.addEventListener("load", fitToScreen);
-    fitToScreen();
-  })();
 </script>
 </body>
 </html>
