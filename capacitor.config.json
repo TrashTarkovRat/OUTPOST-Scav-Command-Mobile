@@ -1,0 +1,9 @@
+{
+  "appId": "com.outpost.scavcommand",
+  "appName": "OUTPOST",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "backgroundColor": "#0D0F0C"
+  }
+}
