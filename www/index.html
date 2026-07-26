@@ -4083,5 +4083,66 @@ input[type="range"]::-moz-range-track {
     });
   }
 </script>
+   <style>
+  /* ===== Mobile app (Capacitor/Android) scale-to-fit =====
+     The UI was designed for desktop windows (1280x800 and up, enforced by
+     Electron's minWidth/minHeight). Phone screens — especially in
+     landscape — are usually shorter than that, so instead of letting
+     things overflow or clip, the whole UI renders at its normal desktop
+     size and gets visually scaled down to fit whatever screen it's
+     actually on, letterboxed like the splash video. Only kicks in inside
+     the native Android app (detected via window.Capacitor); desktop and
+     plain-browser play are untouched. */
+  html.capacitor-fit, body.capacitor-fit {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #050805;
+  }
+  #app.capacitor-fit {
+    width: 1280px !important;
+    max-width: none !important;
+    height: 800px !important;
+    min-height: 800px !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+  }
+</style>
+<script>
+  (function () {
+    // window.Capacitor only exists inside the native wrapper (set by the
+    // Capacitor runtime itself) — never true on desktop Electron or when
+    // index.html is opened in an ordinary browser.
+    if (!window.Capacitor) return;
+
+    var REF_W = 1280, REF_H = 800; // matches the smallest desktop preset
+
+    function fitToScreen() {
+      var app = document.getElementById("app");
+      if (!app) return;
+      document.documentElement.classList.add("capacitor-fit");
+      document.body.classList.add("capacitor-fit");
+      app.classList.add("capacitor-fit");
+
+      var scale = Math.min(window.innerWidth / REF_W, window.innerHeight / REF_H, 1);
+      var offsetX = Math.max(0, (window.innerWidth - REF_W * scale) / 2);
+      var offsetY = Math.max(0, (window.innerHeight - REF_H * scale) / 2);
+
+      app.style.transform = "scale(" + scale + ")";
+      app.style.left = offsetX + "px";
+      app.style.top = offsetY + "px";
+    }
+
+    window.addEventListener("resize", fitToScreen);
+    window.addEventListener("orientationchange", function () {
+      setTimeout(fitToScreen, 200);
+    });
+    window.addEventListener("load", fitToScreen);
+    fitToScreen();
+  })();
+</script>
 </body>
 </html>
