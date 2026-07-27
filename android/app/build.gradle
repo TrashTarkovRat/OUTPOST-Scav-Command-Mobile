@@ -16,7 +16,30 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Without this, debug builds fall back to Gradle's default behavior:
+    // sign with whatever keystore exists at $HOME/.android/debug.keystore,
+    // auto-generating one with a brand-new random key if it's missing. On
+    // GitHub Actions, every run starts on a fresh machine with no cached
+    // keystore, so every single CI build was getting signed with a
+    // different key — Android treats that as a different app for update
+    // purposes and refuses to install over the last build, forcing an
+    // uninstall (which is what was wiping the save each time a new test
+    // APK was installed). Pointing debug builds at a fixed keystore
+    // that's actually checked into the repo (debug.keystore, alongside
+    // this file) means every build, from any machine, signs with the same
+    // key — so a new APK installs as an update and keeps the save.
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

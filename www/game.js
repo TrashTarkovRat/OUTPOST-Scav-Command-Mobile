@@ -7885,13 +7885,10 @@ function renderSkillTreeBody(scav) {
   return `
     <div class="skill-tree-header-row">
       <div class="skill-tree-points">Unspent points: <b>${unspent}</b></div>
-      <div class="skill-tree-hint">One point per level gained. Spent permanently on this scav only.</div>
+      <div class="skill-tree-hint">One point per level gained. Spent permanently on this scav only. Tap a node to see it up close.</div>
     </div>
-    <div class="skill-web-layout">
-      <div class="skill-web-clip">
-        <div class="skill-web-canvas" id="skillWebCanvas">${renderSkillWebSvg(scav)}</div>
-      </div>
-      <div class="skill-detail-panel" id="skillDetailPanel">${renderSkillWebDetailPanel(scav)}</div>
+    <div class="skill-web-clip">
+      <div class="skill-web-canvas" id="skillWebCanvas">${renderSkillWebSvg(scav)}</div>
     </div>
   `;
 }
@@ -7920,53 +7917,88 @@ function openSkillTreeScreen(scavId) {
     // Don't replace #skillTreeBody — that would destroy #skillWebCanvas
     // and kill all the pan/zoom event listeners attached to it (the
     // listeners are on the specific DOM node, not re-added on every
-    // render). Instead patch only the three things that actually change
-    // after a skill point is spent: the unspent-points counter, the SVG
-    // inside the canvas (node colors/ranks), and the detail panel.
-    // The canvas div itself is never touched, so pan/zoom state survives.
+    // render). Instead patch only the two things that actually change
+    // after a skill point is spent: the unspent-points counter and the
+    // SVG inside the canvas (node colors/ranks). The canvas div itself
+    // is never touched, so pan/zoom state (pan/scale) survives.
     const pointsEl = overlay.querySelector(".skill-tree-points");
     if (pointsEl) pointsEl.innerHTML = `Unspent points: <b>${unspentSkillPoints(scav)}</b>`;
     const canvasInner = overlay.querySelector("#skillWebCanvas");
     if (canvasInner) canvasInner.innerHTML = renderSkillWebSvg(scav);
-    const detailEl = overlay.querySelector("#skillDetailPanel");
-    if (detailEl) detailEl.innerHTML = renderSkillWebDetailPanel(scav);
     wireInteractions();
   }
 
   function wireInteractions() {
     overlay.querySelector("#closeSkillTreeBtn").addEventListener("click", closeScreen);
 
-    // Clicking a node on the web just selects it, swapping the detail
-    // panel to show that node's info — spending a point is a separate,
-    // explicit action via the Learn button below.
+    // Clicking a node on the web opens a popup with that node's details
+    // (rank, effect, lock reason, Learn button) instead of updating a
+    // permanent side panel — the tree itself gets the whole screen.
     overlay.querySelectorAll(".skill-web-node").forEach((el) => {
       el.addEventListener("click", () => {
         skillWebSelectedNode = el.getAttribute("data-node");
-        overlay.querySelector("#skillDetailPanel").innerHTML = renderSkillWebDetailPanel(scav);
         overlay.querySelectorAll(".skill-web-node").forEach((n) => {
           n.classList.toggle("selected", n.getAttribute("data-node") === skillWebSelectedNode);
         });
-        wireLearnButton();
+        openSkillNodeModal();
       });
     });
-
-    wireLearnButton();
   }
 
-  function wireLearnButton() {
-    const btn = overlay.querySelector(".skill-learn-btn");
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      const branchId = btn.getAttribute("data-branch");
-      const nodeId = btn.getAttribute("data-node");
-      const node = getSkillNodeDef(branchId, nodeId);
-      const ok = learnSkillRank(scav, branchId, nodeId);
-      if (ok) {
-        pushToast(`${scav.name} learned ${node.name} (rank ${getSkillRank(scav, nodeId)}).`);
-        refresh();
-      }
+  // Popup shown when a skill node is tapped — reuses the .modal-overlay/
+  // .modal-box shell (same pattern as settings/raid report) and the
+  // existing .skill-detail* content classes that used to live in the
+  // permanent side panel.
+  let skillNodeModal = null;
+
+  function closeSkillNodeModal() {
+    if (skillNodeModal) {
+      skillNodeModal.remove();
+      skillNodeModal = null;
+    }
+  }
+
+  function openSkillNodeModal() {
+    closeSkillNodeModal();
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay skill-node-modal-overlay";
+    modal.innerHTML = `
+      <div class="modal-box skill-node-modal-box">
+        <div class="modal-header">
+          <span>SKILL DETAILS</span>
+          <button class="rs-back-btn skill-node-modal-close" id="closeSkillNodeModalBtn">✕ Close</button>
+        </div>
+        <div class="skill-node-modal-body" id="skillNodeModalBody">${renderSkillWebDetailPanel(scav)}</div>
+      </div>
+    `;
+    overlay.appendChild(modal);
+    skillNodeModal = modal;
+
+    function wireLearnButton() {
+      const btn = modal.querySelector(".skill-learn-btn");
+      if (!btn) return;
+      btn.addEventListener("click", () => {
+        const branchId = btn.getAttribute("data-branch");
+        const nodeId = btn.getAttribute("data-node");
+        const node = getSkillNodeDef(branchId, nodeId);
+        const ok = learnSkillRank(scav, branchId, nodeId);
+        if (ok) {
+          pushToast(`${scav.name} learned ${node.name} (rank ${getSkillRank(scav, nodeId)}).`);
+          refresh(); // updates the canvas + points counter behind the popup
+          const bodyEl = modal.querySelector("#skillNodeModalBody");
+          if (bodyEl) bodyEl.innerHTML = renderSkillWebDetailPanel(scav);
+          wireLearnButton(); // re-wire the fresh button (maxed / next rank)
+        }
+      });
+    }
+    wireLearnButton();
+
+    modal.querySelector("#closeSkillNodeModalBtn").addEventListener("click", closeSkillNodeModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeSkillNodeModal();
     });
   }
+
   // Pan and zoom state for the skill web canvas.
   // Transform is applied as a CSS transform on the canvas container div
   // (not by manipulating the SVG viewBox), so all existing node click
@@ -7993,6 +8025,31 @@ function openSkillTreeScreen(scavId) {
     canvasEl.style.transformOrigin = "0 0";
     canvasEl.style.cursor = isDragging ? "grabbing" : "grab";
   }
+
+  // Fit-to-view: on open, scale the tree down (or up) so the whole web
+  // fits inside the visible clip area and sits centered, instead of
+  // starting at pan 0,0 / scale 1 — which used to place only a small,
+  // off-center sliver of the tree (near its own top-left corner) inside
+  // the clip window, looking "offset to the left and tiny". The canvas's
+  // native (pre-transform) size is a square matching the clip's width
+  // (see .skill-web-canvas/.skill-web-svg CSS), and the tree's hub sits
+  // at the exact center of that square, so centering the whole square in
+  // the clip also centers the hub. A small margin (0.92) keeps the
+  // outermost nodes/labels from touching the very edge of the screen.
+  function fitToClip() {
+    const clipEl = overlay.querySelector(".skill-web-clip");
+    if (!clipEl) return;
+    const clipW = clipEl.clientWidth;
+    const clipH = clipEl.clientHeight;
+    const nativeW = canvasEl.offsetWidth;
+    const nativeH = canvasEl.offsetHeight;
+    if (!clipW || !clipH || !nativeW || !nativeH) return;
+    const fitScale = Math.min(clipW / nativeW, clipH / nativeH) * 0.92;
+    scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fitScale));
+    panX = clipW / 2 - (nativeW / 2) * scale;
+    panY = clipH / 2 - (nativeH / 2) * scale;
+  }
+  fitToClip();
   applyTransform();
 
   canvasEl.addEventListener("mousedown", (e) => {

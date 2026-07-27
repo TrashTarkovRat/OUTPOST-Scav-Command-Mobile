@@ -3937,6 +3937,22 @@ input[type="range"]::-moz-range-track {
     overflow-y: auto;
   }
 
+  /* Active Raids ticker: sized for a roomy desktop window (130px-tall
+     cards with a reserved chat-bubble slot on top), it eats a big enough
+     chunk of a short phone screen's height that the Roster/Send-a-Raid/
+     Camp row above becomes visibly cramped. None of that content is
+     essential on phone — the bubble is just flavor text, and the bar/ETA
+     still read fine much smaller — so trimming it here gives the panel
+     row below real breathing room instead of a squeeze. */
+  .radio-log { margin-bottom: 8px; }
+  .radio-log-header { padding: 4px 10px; }
+  .radio-entries { padding: 6px 8px; gap: 6px; }
+  .radio-entry { flex-basis: 170px; height: 72px; }
+  .radio-entry .re-overlay { padding: 5px 7px; }
+  .radio-entry .re-bubble-slot { display: none; }
+  .radio-entry .bar-track { margin-top: 4px; }
+  .radio-entry .eta { margin-top: 2px; }
+
   /* Camp buildings: desktop/tablet's tighter, depth-clustered spacing
      (see CAMP_BUILDINGS's comments in game.js — some closeness there is
      intentional, for a foreground/background layered look) reads fine
@@ -4123,13 +4139,11 @@ input[type="range"]::-moz-range-track {
   .char-body > section { padding: 10px; }
   .char-stash-tabs { margin: -10px -10px 10px; }
 
-  /* Skill tree: 70vh for the pan/zoom canvas is a reasonable chunk of a
-     tall desktop window, but on a phone's already-short viewport it's
-     most of the screen by itself, pushing the detail panel (rank,
-     effect text, Learn button) a long scroll away. Shrinking it here
-     just means less panning to see the whole tree at once — the canvas
-     is still fully zoomable/pannable, same as desktop. */
-  .skill-web-clip { height: 42vh; }
+  /* Skill tree: the clip area now fills all remaining space via flex
+     (see .skill-tree-body/.skill-web-clip base rules) instead of a fixed
+     vh value, so it's automatically "full screen" on a short phone
+     viewport too — no override needed here anymore. Just trim the header
+     row's spacing a bit so more of that flex space goes to the canvas. */
   .skill-tree-header-row { margin-bottom: 10px; padding-bottom: 8px; }
 
   /* Raid report modal (.modal-overlay/.modal-box, shared by the field
@@ -4162,15 +4176,20 @@ input[type="range"]::-moz-range-track {
 }
 .skill-tree-body {
   flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   padding: 20px;
   overscroll-behavior: contain;
   /* Same flex min-height:auto default as elsewhere — without this the
-     screen's whole content (skill web + detail panel) refuses to shrink
-     to the space .skill-tree-screen actually has on a short phone
-     screen, so it grows past the screen instead of scrolling, and the
-     detail panel (rank, effect text, Learn button) ends up clipped off
-     with nothing to scroll it into view. */
+     screen's whole content refuses to shrink to the space
+     .skill-tree-screen actually has on a short phone screen. The header
+     row is a fixed-size row and the web clip below it is flex:1, so the
+     clip always fills exactly whatever vertical space is left over —
+     that's what makes the pan/zoom canvas genuinely full-screen instead
+     of a fixed vh guess. The clip itself is the thing that's panned/
+     zoomed via JS transforms, not scrolled, so overflow here is hidden
+     rather than auto (no competing scrollbar). */
+  overflow: hidden;
   min-height: 0;
 }
 .stats-screen-body {
@@ -4234,6 +4253,7 @@ input[type="range"]::-moz-range-track {
 .stats-boss-row.stats-boss-row-zero .stats-boss-kills { color: var(--bone-dim); }
 .stats-boss-row.stats-boss-header .stats-boss-kills { color: var(--bone-dim); font-weight: 400; }
 .skill-tree-header-row {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -4253,27 +4273,34 @@ input[type="range"]::-moz-range-track {
 .skill-tree-points b { color: var(--brass-bright); font-size: 9px; }
 .skill-tree-hint { font-size: 7.4px; color: var(--bone-dim); }
 
-.skill-web-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
 .skill-web-clip {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  width: 100%;
   overflow: hidden;
-  /* Fixed height so the clip region is well-defined for pan/zoom */
-  height: 70vh;
+  /* Fills all remaining space in .skill-tree-body (see that rule) —
+     this is what makes the tree genuinely full-screen instead of a
+     fixed-height box, on any screen size including a short phone. */
   position: relative;
   cursor: grab;
 }
 .skill-web-canvas {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   cursor: grab;
   user-select: none;
   will-change: transform;
-  /* Transform origin is set to 0 0 in JS so zoom aims at the cursor */
+  /* width:100% resolves against .skill-web-clip (its containing block,
+     since that's position:relative) giving the canvas a definite native
+     width to measure via offsetWidth. Height is auto — the SVG inside is
+     a perfect square (viewBox 1570x1570) so the canvas ends up square
+     too, at whatever the clip's width is. openSkillTreeScreen reads that
+     native size via offsetWidth/offsetHeight to fit-to-view on open, and
+     transform (translate+scale, origin 0 0) is applied on top of this
+     unscaled layout box without changing it. */
 }
 .skill-web-svg {
   width: 100%;
@@ -4329,12 +4356,15 @@ input[type="range"]::-moz-range-track {
 .skill-web-node.maxed .skill-web-node-rank { fill: var(--brass-bright); }
 .skill-web-node.selected .skill-web-node-circle { stroke-width: 4; filter: drop-shadow(0 0 5px rgba(194,169,79,0.5)); }
 
-.skill-detail-panel {
-  flex-shrink: 0;
-  width: 240px;
-  position: sticky;
-  top: 0;
-}
+/* Skill node popup — appears on top of the full-screen web when a node
+   is tapped, reusing the .modal-overlay/.modal-box shell used elsewhere
+   (settings, raid report) so it matches the rest of the app's popup
+   style. The .skill-detail* classes below are the actual content and
+   are unchanged from when they lived in a permanent side panel. */
+.skill-node-modal-overlay { z-index: 190; }
+.skill-node-modal-box { width: 100%; max-width: 360px; }
+.skill-node-modal-close { margin-left: auto; }
+.skill-node-modal-body { padding: 16px; }
 .skill-detail-empty {
   font-size: 7px;
   color: var(--bone-dim);
@@ -4368,11 +4398,6 @@ input[type="range"]::-moz-range-track {
 .skill-detail-lock { font-size: 6.9px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--rust-bright); margin-top: 8px; }
 .skill-detail-next { font-size: 7.2px; color: var(--bone-dim); margin-top: 8px; font-style: italic; }
 .skill-learn-btn { margin-top: 12px; width: 100%; }
-
-@media (max-width: 1000px) {
-  .skill-web-layout { flex-direction: column; }
-  .skill-detail-panel { width: 100%; position: static; }
-}
 
 .char-skills-btn { width: 100%; }
 
