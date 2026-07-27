@@ -1975,6 +1975,16 @@ input[type="range"]::-moz-range-track {
 .char-body > section {
   overflow-y: auto;
   padding: 18px;
+  /* Grid item — same min-height:auto default as every other grid/flex
+     item this codebase has already had to override (.rs-info-panel,
+     .main-grid, .left-stack...). Without this, each of the three
+     columns (portrait/stats, equip, stash) refuses to shrink to fit
+     .char-body's actual height on a short phone screen, so
+     overflow-y:auto never engages and the bottom of each column —
+     including the stats block and the "Open Skill Tree" button — just
+     gets clipped by .char-body's own overflow:hidden with no way to
+     scroll to it. */
+  min-height: 0;
 }
 .char-portrait-col {
   border-right: 1px solid var(--border);
@@ -2295,6 +2305,19 @@ input[type="range"]::-moz-range-track {
 @media (max-width: 1000px) {
   .char-body { grid-template-columns: 1fr; overflow-y: auto; }
   .char-portrait-col, .char-equip-col, .char-stash-col { border: none; border-bottom: 1px solid var(--border); }
+  /* .char-body > section's overflow-y:auto + min-height:0 (see base rule)
+     is exactly right for the desktop 3-column layout, where each column
+     needs its own independent scroll. Stacked into one column here,
+     though, that same combination makes an auto-sized grid row collapse
+     to an equal share of .char-body's height instead of its own content
+     height — portrait/equip/stash each get squeezed into a fixed third
+     of the screen with their own tiny internal scrollbar, rather than
+     showing their natural content with the whole screen scrolling once.
+     Reverting to natural sizing here — since .char-body itself already
+     scrolls as the single unit — is what actually lets the stats block
+     and the Skills button just show up in the normal flow instead of
+     being trapped behind a second, tiny scroll region. */
+  .char-body > section { overflow-y: visible; min-height: auto; }
 }
 
 /* ===== INFIRMARY (heal-over-time) ===== */
@@ -4062,6 +4085,69 @@ input[type="range"]::-moz-range-track {
   .forecast-label { font-size: 5.4px; }
   .forecast-name { font-size: 6.6px; }
   .forecast-effect { margin-top: 0; }
+
+  /* Tutorial card: positionTutorialCard() (game.js) picks below/above/
+     right/left of whatever it's highlighting based on a hardcoded
+     180px-tall assumption, then falls back to whichever side has room —
+     but on a short phone screen there often isn't a side with 180px to
+     spare, and the fallback branches don't re-check the vertical fit at
+     all. The result was some steps' card (and its Next/Skip buttons)
+     partly landing off the bottom of the screen with no way to scroll
+     to them — a tutorial that can't be dismissed or advanced. Forcing
+     the card to always just center itself with its own scroll on phone
+     sidesteps that whole positioning problem — !important is required
+     since positionTutorialCard() sets top/left/right/bottom/transform
+     as inline styles every step. */
+  .tutorial-card {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(300px, 88vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 12px 14px;
+  }
+  .tutorial-title { margin-bottom: 4px; }
+  .tutorial-text { margin-bottom: 8px; }
+
+  /* Character screen: same width-triggered stack as .rs-body, same
+     problem — on a landscape phone there's often not enough spare
+     height to stack three full columns (portrait/stats, equip, stash)
+     and still show the bottom of each one. The .char-body > section
+     min-height:0 fix above is what actually lets each column scroll;
+     this just trims the padding so more of each column's content is
+     visible before scrolling is needed. */
+  .char-body > section { padding: 10px; }
+  .char-stash-tabs { margin: -10px -10px 10px; }
+
+  /* Skill tree: 70vh for the pan/zoom canvas is a reasonable chunk of a
+     tall desktop window, but on a phone's already-short viewport it's
+     most of the screen by itself, pushing the detail panel (rank,
+     effect text, Learn button) a long scroll away. Shrinking it here
+     just means less panning to see the whole tree at once — the canvas
+     is still fully zoomable/pannable, same as desktop. */
+  .skill-web-clip { height: 42vh; }
+  .skill-tree-header-row { margin-bottom: 10px; padding-bottom: 8px; }
+
+  /* Raid report modal (.modal-overlay/.modal-box, shared by the field
+     report and every other modal in the game): .modal-log's 160px
+     min-height floor was sized for a roomy desktop window. On a short
+     phone screen, that floor plus the header plus a result section with
+     several loot lines/injury notes can together add up to more than
+     .modal-box's own 85vh max-height — and since .modal-box never set
+     overflow:hidden, the excess just spilled out past the bottom of the
+     box (and the screen) instead of being clipped or scrolled. Letting
+     .modal-log actually shrink, and giving .modal-result its own scroll
+     as a fallback for a long result, keeps the whole report reachable
+     regardless of how much happened on that raid. */
+  .modal-overlay { padding: 8px; }
+  .modal-box { max-height: 92vh; overflow: hidden; }
+  .modal-header { padding: 8px 12px; }
+  .modal-log { min-height: 0; padding: 8px 12px; }
+  .modal-result { max-height: 45vh; overflow-y: auto; padding: 8px 12px; }
 }
 
 /* ===== SKILL TREE (per scav) ===== */
@@ -4079,6 +4165,13 @@ input[type="range"]::-moz-range-track {
   overflow-y: auto;
   padding: 20px;
   overscroll-behavior: contain;
+  /* Same flex min-height:auto default as elsewhere — without this the
+     screen's whole content (skill web + detail panel) refuses to shrink
+     to the space .skill-tree-screen actually has on a short phone
+     screen, so it grows past the screen instead of scrolling, and the
+     detail panel (rank, effect text, Learn button) ends up clipped off
+     with nothing to scroll it into view. */
+  min-height: 0;
 }
 .stats-screen-body {
   flex: 1;
