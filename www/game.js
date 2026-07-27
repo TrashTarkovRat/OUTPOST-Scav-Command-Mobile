@@ -8151,7 +8151,16 @@ function openSkillTreeScreen(scavId) {
       pinchMidX = (mid.x - rect.left - panX) / scale;
       pinchMidY = (mid.y - rect.top - panY) / scale;
     }
-    e.preventDefault();
+    // No preventDefault() here (unlike touchmove below) — per the touch
+    // events spec, canceling touchstart suppresses the browser's
+    // synthetic compatibility click for that entire touch gesture, which
+    // was silently killing every tap-to-select-a-node interaction on
+    // real touch devices (a plain tap never generates a click at all).
+    // canvasEl's own touch-action:none (set below) already stops the
+    // browser from scrolling/zooming the page on touch here, so this
+    // preventDefault was redundant for that purpose anyway — touchmove
+    // still calls it once an actual drag/pinch is underway, which is the
+    // point where suppressing default handling actually matters.
   }, { passive: false });
 
   canvasEl.addEventListener("touchmove", (e) => {
