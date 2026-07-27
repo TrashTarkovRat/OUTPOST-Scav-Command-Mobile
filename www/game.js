@@ -7798,6 +7798,7 @@ function renderSkillWebSvg(scav) {
 
       badges += `
         <g class="${badgeClass}" data-branch="${branchId}" data-node="${node.id}" transform="translate(${pos.x},${pos.y})">
+          <circle r="34" fill="transparent" class="skill-web-node-hit" />
           <circle r="26" class="skill-web-node-circle" />
           <text class="skill-web-node-rank" y="5">${state.rank}/${node.maxRank}</text>
         </g>
@@ -8026,16 +8027,25 @@ function openSkillTreeScreen(scavId) {
     canvasEl.style.cursor = isDragging ? "grabbing" : "grab";
   }
 
-  // Fit-to-view: on open, scale the tree down (or up) so the whole web
-  // fits inside the visible clip area and sits centered, instead of
-  // starting at pan 0,0 / scale 1 — which used to place only a small,
-  // off-center sliver of the tree (near its own top-left corner) inside
-  // the clip window, looking "offset to the left and tiny". The canvas's
-  // native (pre-transform) size is a square matching the clip's width
-  // (see .skill-web-canvas/.skill-web-svg CSS), and the tree's hub sits
-  // at the exact center of that square, so centering the whole square in
-  // the clip also centers the hub. A small margin (0.92) keeps the
-  // outermost nodes/labels from touching the very edge of the screen.
+  // Fit-to-view: on open, scale the tree and center it in the visible
+  // clip area, instead of starting at pan 0,0 / scale 1 — which used to
+  // place only a small, off-center sliver of the tree (near its own
+  // top-left corner) inside the clip window, looking "offset to the left
+  // and tiny". The canvas's native (pre-transform) size is a square
+  // matching the clip's width (see .skill-web-canvas/.skill-web-svg CSS),
+  // and the tree's hub sits at the exact center of that square, so
+  // centering the whole square in the clip also centers the hub.
+  //
+  // Purely "contain" fitting the whole 45-node tree turned out to not be
+  // mobile friendly in practice: on a landscape phone the clip area is
+  // short, so fitting the entire tree shrank nodes down to ~7px across —
+  // technically visible, but too small to reliably tap with a finger (and
+  // the rank/label text became unreadable with it). This picks whichever
+  // is LARGER of "fit the whole tree" and "keep nodes at a legible,
+  // tappable size", so a short/small screen favors tappability over
+  // seeing the whole tree at once (panning covers the rest — pinch/drag
+  // pan still works exactly as before), while a big screen where contain-
+  // fit already produces comfortable nodes is barely affected.
   function fitToClip() {
     const clipEl = overlay.querySelector(".skill-web-clip");
     if (!clipEl) return;
@@ -8044,7 +8054,16 @@ function openSkillTreeScreen(scavId) {
     const nativeW = canvasEl.offsetWidth;
     const nativeH = canvasEl.offsetHeight;
     if (!clipW || !clipH || !nativeW || !nativeH) return;
-    const fitScale = Math.min(clipW / nativeW, clipH / nativeH) * 0.92;
+    const containScale = Math.min(clipW / nativeW, clipH / nativeH) * 0.92;
+    // Node circles are drawn at r=26 (52 native SVG units across). Below
+    // ~36 CSS px across, a real finger can't reliably pick one node out
+    // of the densely packed web — this solves for whatever scale makes
+    // that true regardless of screen size or resolution.
+    const MIN_NODE_PX = 36;
+    const NODE_DIAMETER_SVG_UNITS = 52;
+    const nativePxPerSvgUnit = nativeW / 1570; // viewBox is 0 0 1570 1570
+    const minTapScale = MIN_NODE_PX / (NODE_DIAMETER_SVG_UNITS * nativePxPerSvgUnit);
+    const fitScale = Math.max(containScale, minTapScale);
     scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, fitScale));
     panX = clipW / 2 - (nativeW / 2) * scale;
     panY = clipH / 2 - (nativeH / 2) * scale;
