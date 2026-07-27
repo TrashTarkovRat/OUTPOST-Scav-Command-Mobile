@@ -375,6 +375,17 @@ h1, h2, h3,
   margin: 0 auto;
   padding: 16px;
   min-height: 100vh;
+  /* Now that the campfire scene lives in its own full-screen overlay
+     (rather than inline here demanding 560px+ of its own), .app's normal-
+     flow content is just the header, radio log, and left-stack panels —
+     nothing left that legitimately needs to grow past one viewport. Capping
+     it here (min-height + max-height together = a hard 100vh) means any
+     panel-stack overflow is handled by .left-stack's own internal
+     overflow-y: auto instead of stretching the whole page. overflow-y:
+     auto here too, purely as a safety net in case something unexpected
+     ever exceeds that budget — normally invisible/inert. */
+  max-height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -431,7 +442,6 @@ h1, h2, h3,
 }
 .header-btn:hover { border-color: var(--brass-bright); color: var(--brass-bright); background: var(--bg-panel-raised); text-shadow: var(--glow); }
 .header-btn:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
-.header-btn.mobile-stash-btn { display: none; }
 
 .icon-btn {
   display: flex;
@@ -702,6 +712,11 @@ h1, h2, h3,
   /* Grows to fill whatever vertical space .app's now-real height gives
      it, instead of only ever being as tall as its own content. */
   flex: 1;
+  /* Same flex min-height default problem as .left-stack below — without
+     this, .main-grid can't actually shrink to the space .app gives it
+     when its content (the left-stack panels) is taller than that, so the
+     page grows instead of .left-stack scrolling internally. */
+  min-height: 0;
 }
 .left-stack {
   display: flex;
@@ -709,6 +724,19 @@ h1, h2, h3,
   gap: 14px;
   width: 480px;
   flex-shrink: 0;
+  /* Three panels (Roster / Send a Raid / Camp) don't always fit within a
+     short phone-landscape height even after the max-height:500px
+     compacting below — scrolling the stack itself (rather than clipping
+     the bottom panel with no way to reach it) keeps every panel reachable
+     regardless of screen height. No effect on desktop, where all three
+     already fit without scrolling.
+     min-height: 0 overrides the flex default (min-height: auto, which
+     refuses to shrink a flex item below its content size) — without it,
+     overflow-y: auto never actually kicks in because .left-stack just
+     grows past .main-grid's stretched height instead of clipping/
+     scrolling within it. */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .panel {
@@ -1396,6 +1424,27 @@ input[type="range"]::-moz-range-track {
   animation: raidScreenIn 0.25s ease;
 }
 @keyframes raidScreenIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== CAMP — FULL SCREEN OVERLAY =====
+   Same fixed/inset pattern as .raid-select-screen above. The campfire
+   scene used to render inline in .main-grid, sharing width with the
+   left-stack panels — that's what forced it to compete for horizontal
+   AND vertical space on narrow/short phone screens. Giving it the whole
+   viewport to itself here removes that squeeze entirely; .campfire-scene
+   (flex: 1, see below) just fills whatever's left under the header. */
+.camp-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  animation: raidScreenIn 0.25s ease;
+}
+.camp-screen .campfire-scene {
+  border: none;
+  min-width: 0;
+}
 
 .rs-header {
   display: flex;
@@ -3780,7 +3829,6 @@ input[type="range"]::-moz-range-track {
 @media (max-width: 1000px) {
   .left-stack { width: 280px; }
   .campfire-scene { min-width: 200px; }
-  .header-btn.mobile-stash-btn { display: inline-flex; }
 }
 
 @media (max-width: 600px) {
@@ -4083,5 +4131,6 @@ input[type="range"]::-moz-range-track {
     });
   }
 </script>
+
 </body>
 </html>

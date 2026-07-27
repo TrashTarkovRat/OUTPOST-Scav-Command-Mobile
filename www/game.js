@@ -4459,6 +4459,7 @@ let selectedScavId = null;
 let selectedMapId = null;
 let selectedRooms = []; // room ids the player has chosen for this raid's path
 let raidScreenOpen = false;
+let campScreenOpen = false;
 let tickInterval = null;
 let activeModalRaid = null;
 let raidScreenTab = "region"; // "region" | "dungeons" | "arena" — which tab the raid select screen is showing
@@ -11393,7 +11394,6 @@ function renderHeader() {
     <div class="header">
       <div class="logo">OUTPOST</div>
       <div class="header-stats">
-        <button class="header-btn mobile-stash-btn" id="openStashBtnMobile">Stash</button>
         <button class="header-btn" id="openRaidLogBtn">Raid Log</button>
         ${outpostBtn}
         <button class="header-btn" id="openCodexBtn">Codex</button>
@@ -14247,6 +14247,39 @@ function wireCampfireBuildings() {
   });
 }
 
+// Small teaser card for the left-stack "Camp" panel — mirrors the shape of
+// renderRaidLauncherCard (a line of status text plus one button) so the
+// three left-stack panels read as a consistent set. The actual campfire
+// scene (buildings, chest, survivors) lives in the full-screen overlay
+// opened by the button here — see renderCampScreen.
+function renderCampPanelCard() {
+  return `
+    <div class="raid-launcher-card">
+      <div class="rl-status">Buildings, recruiting, and base upgrades.</div>
+      <button class="btn" id="openCampScreenBtn">Open Camp</button>
+    </div>
+  `;
+}
+
+// Full-screen camp view — same fixed/inset overlay pattern as the Raid
+// Select and Roster screens (see .camp-screen / .raid-select-screen /
+// .roster-screen). Only holds a header and the #campfireSceneSlot mount
+// point; renderAll() detaches/reattaches the live #campfireScene node into
+// whatever slot exists in the freshly-built markup each render, exactly as
+// it always has, so survivor animations keep running uninterrupted while
+// this screen is open — this function doesn't need to know about that.
+function renderCampScreen() {
+  return `
+    <div class="camp-screen">
+      <div class="rs-header">
+        <div class="rs-title">CAMP</div>
+        <button class="rs-back-btn" id="closeCampScreenBtn">← Back</button>
+      </div>
+      <div id="campfireSceneSlot"></div>
+    </div>
+  `;
+}
+
 function renderRaidLauncherCard() {
   if (STATE.campEvent) {
     return `
@@ -15695,9 +15728,13 @@ function renderAll() {
           <div class="panel-header">Send a Raid</div>
           <div class="panel-body">${renderRaidLauncherCard()}</div>
         </div>
+        <div class="panel">
+          <div class="panel-header">Camp</div>
+          <div class="panel-body">${renderCampPanelCard()}</div>
+        </div>
       </div>
-      <div id="campfireSceneSlot"></div>
     </div>
+    ${campScreenOpen ? renderCampScreen() : ""}
     ${raidScreenOpen ? renderRaidSelectScreen() : ""}
   `;
 
@@ -15740,11 +15777,6 @@ function wireEvents() {
       if (!isNaN(idx)) showStoredFieldReport(idx);
     });
   });
-
-  const openStashBtnMobile = document.getElementById("openStashBtnMobile");
-  if (openStashBtnMobile) {
-    openStashBtnMobile.addEventListener("click", () => openStashScreen());
-  }
 
   const openRaidLogBtn = document.getElementById("openRaidLogBtn");
   if (openRaidLogBtn) {
@@ -15819,6 +15851,21 @@ function wireEvents() {
   const openRosterScreenBtn = document.getElementById("openRosterScreenBtn");
   if (openRosterScreenBtn) {
     openRosterScreenBtn.addEventListener("click", () => openRosterScreen());
+  }
+
+  const openCampScreenBtn = document.getElementById("openCampScreenBtn");
+  if (openCampScreenBtn) {
+    openCampScreenBtn.addEventListener("click", () => {
+      campScreenOpen = true;
+      renderAll();
+    });
+  }
+  const closeCampScreenBtn = document.getElementById("closeCampScreenBtn");
+  if (closeCampScreenBtn) {
+    closeCampScreenBtn.addEventListener("click", () => {
+      campScreenOpen = false;
+      renderAll();
+    });
   }
 
   // Empty-roster (all scavs dead) recruit + reset buttons — only present
