@@ -4007,6 +4007,61 @@ input[type="range"]::-moz-range-track {
      desktop's roomy 20px padding on every side adds up fast across a
      popup with several stacked sections on a short screen. */
   .rs-info-panel { padding: 10px; }
+
+  /* Weather forecast: desktop shows a small clock badge in the scene's
+     top-right corner that reveals a 220px-wide popup list on hover.
+     Phones have no hover, so .cf-forecast-panel's existing
+     @media(hover:none) fallback makes that popup permanently visible
+     instead — parked right over the buildings clustered in that corner
+     (recYard/workshop) for the entire time the camp screen is open.
+     Turning the whole clock badge into a full-width banner along the
+     very top edge of the scene fixes that: nothing below it is ever
+     covered, since buildings sit lower in the scene, and everything that
+     used to require a hover is just visible plainly, all the time. This
+     reuses the exact same elements (.cf-clock, .cf-forecast-panel),
+     just stops treating one as a small badge and the other as its
+     popup — here they're two halves of one banner row. */
+  .cf-clock {
+    top: 0;
+    right: 0;
+    left: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 4px 10px;
+    gap: 8px;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    background: rgba(5,6,4,0.88);
+  }
+  .cf-forecast-panel {
+    position: static;
+    width: auto;
+    margin-top: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    opacity: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 14px;
+    z-index: auto;
+  }
+  .forecast-row {
+    padding: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+  .forecast-row + .forecast-row {
+    border-top: none;
+    border-left: 1px solid var(--border);
+    padding-left: 10px;
+  }
+  .forecast-label { font-size: 5.4px; }
+  .forecast-name { font-size: 6.6px; }
+  .forecast-effect { margin-top: 0; }
 }
 
 /* ===== SKILL TREE (per scav) ===== */
