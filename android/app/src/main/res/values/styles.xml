@@ -13,6 +13,18 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Lets the app draw fully behind a display cutout (camera
+             notch/punch-hole) instead of Android reserving a black bar
+             around it — this app is landscape-locked, so without this a
+             cutout on the "short edge" can letterbox the game with a
+             solid bar that looks like a lingering system UI element.
+             Combined with MainActivity's hideSystemBars() and the
+             existing env(safe-area-inset-*) CSS padding, the game still
+             avoids drawing its own UI under the actual cutout — this
+             just stops Android from adding an extra bar on top of that.
+             Ignored (harmless) below API 28, which is fine since this
+             attribute doesn't exist there anyway. -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 
 

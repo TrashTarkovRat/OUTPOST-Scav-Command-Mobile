@@ -10225,6 +10225,16 @@ function openCodexScreen() {
 
 async function openSettingsPanel() {
   const isElectron = !!window.outpostSettings;
+  // Window resizing, fullscreen toggling, and a manual "Exit Game" button
+  // are desktop-window concepts that don't mean anything on a native
+  // Android install — there's no window to resize, the app is already
+  // effectively fullscreen, and Android's own Back/recents handle exiting.
+  // Rather than show them disabled with an explanatory notice (which is
+  // the right call for someone testing the plain web build in a desktop
+  // browser tab, see browserNotice below), just leave them out entirely
+  // on the native app so Settings isn't cluttered with controls that can
+  // never do anything here.
+  const isNative = !!window.Capacitor;
   showLegacyPatchNotes = false; // always start collapsed when the panel opens
   let current = { resolution: "1600x900", fullscreen: false };
   let presets = ["1280x800", "1600x900", "1920x1080"];
@@ -10241,7 +10251,7 @@ async function openSettingsPanel() {
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
 
-  const browserNotice = isElectron
+  const browserNotice = (isElectron || isNative)
     ? ""
     : `<div class="settings-notice">Display settings need the desktop app — this works once you've built and launched OUTPOST.exe.</div>`;
 
@@ -10251,15 +10261,7 @@ async function openSettingsPanel() {
     return `<div class="gear-opt res-opt ${active ? "active" : ""} ${!isElectron ? "disabled" : ""}" data-res-key="${key}">${escapeHtml(label)}</div>`;
   }).join("");
 
-  overlay.innerHTML = `
-    <div class="modal-box settings-box">
-      <div class="modal-header"><span class="dot" style="background:var(--brass-bright);animation:none;"></span> SETTINGS</div>
-      <div class="settings-tabs">
-        <button class="settings-tab active" data-tab="settings">Settings</button>
-        <button class="settings-tab" data-tab="patchnotes">Patch Notes</button>
-      </div>
-      <div class="panel-body settings-tab-panel" data-tab-panel="settings">
-        ${browserNotice}
+  const displaySection = isNative ? "" : `
         <div class="section-divider" style="margin-top:0;">Display</div>
         <div class="launch-row" style="margin-top:10px;">
           <span class="lbl">Fullscreen</span>
@@ -10271,7 +10273,24 @@ async function openSettingsPanel() {
           <span class="lbl">Window resolution</span>
         </div>
         <div class="gear-picker">${resOptions}</div>
-        <div class="section-divider">Audio</div>
+  `;
+
+  const exitGameSection = isNative ? "" : `
+        <button class="btn danger" id="exitGameBtn" ${!isElectron ? "disabled" : ""}>Exit Game</button>
+        ${!isElectron ? `<div class="settings-notice" style="margin-top:8px;margin-bottom:0;">Closing the app this way also needs the desktop build — just close the browser tab for now.</div>` : ""}
+  `;
+
+  overlay.innerHTML = `
+    <div class="modal-box settings-box">
+      <div class="modal-header"><span class="dot" style="background:var(--brass-bright);animation:none;"></span> SETTINGS</div>
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="settings">Settings</button>
+        <button class="settings-tab" data-tab="patchnotes">Patch Notes</button>
+      </div>
+      <div class="panel-body settings-tab-panel" data-tab-panel="settings">
+        ${browserNotice}
+        ${displaySection}
+        <div class="section-divider" ${isNative ? 'style="margin-top:0;"' : ""}>Audio</div>
         <div class="launch-row" style="margin-top:10px;">
           <span class="lbl">Volume</span>
           <span class="lbl" id="volumeValueLabel">${Math.round(getAudioVolume() * 100)}%</span>
@@ -10279,9 +10298,8 @@ async function openSettingsPanel() {
         <input type="range" id="volumeSlider" min="0" max="100" step="1" value="${Math.round(getAudioVolume() * 100)}" style="width:100%;margin-top:6px;">
         <div class="settings-notice" style="margin-top:8px;margin-bottom:0;">Covers UI sounds and site ambience. Saved on this device — carries over even if you reset progress or start New Game+.</div>
         <div class="section-divider">Game</div>
-        <button class="btn danger" id="exitGameBtn" ${!isElectron ? "disabled" : ""}>Exit Game</button>
-        ${!isElectron ? `<div class="settings-notice" style="margin-top:8px;margin-bottom:0;">Closing the app this way also needs the desktop build — just close the browser tab for now.</div>` : ""}
-        <button class="btn secondary" id="replayTutorialBtn" style="margin-top:10px;">Replay Tutorial</button>
+        ${exitGameSection}
+        <button class="btn secondary" id="replayTutorialBtn" ${isNative ? "" : 'style="margin-top:10px;"'}>Replay Tutorial</button>
         <div class="settings-notice" style="margin-top:8px;margin-bottom:0;">Walks through the basics again from the start.</div>
         <button class="btn danger" id="wipeProgressBtn" style="margin-top:10px;">Reset Progress</button>
         <div class="settings-notice" style="margin-top:8px;margin-bottom:0;">Deletes your save completely — roster, base upgrades, resources, everything. Click twice to confirm. Can't be undone.</div>
