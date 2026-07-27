@@ -15508,22 +15508,22 @@ const TUTORIAL_STEPS = [
   {
     id: "roster",
     title: "Your Scavengers",
-    text: "These are your scavs — the people doing the actual work. Each one has their own HP, morale, skills, and gear. Click any scav card to open their character sheet.",
-    highlight: ".scav-card",
+    text: "These are your scavs — the people doing the actual work. Tap \"Open Roster\" to see them, then tap any scav card to open their character sheet.",
+    highlight: "#openRosterScreenBtn",
     action: "next",
   },
   {
     id: "loadout",
     title: "Equip Before You Send",
-    text: "By default your scavs go out with fists, rags, and a basic satchel. That's survivable but not great. Click the loadout button on a scav card to equip better gear from your stash — it directly affects their survival odds.",
-    highlight: ".loadout-btn, .char-loadout-btn, [data-open-loadout]",
+    text: "By default your scavs go out with fists, rags, and a basic satchel. That's survivable but not great. From the Roster, tap a scav's loadout button to equip better gear from your stash — it directly affects their survival odds.",
+    highlight: "#openRosterScreenBtn",
     action: "next",
   },
   {
     id: "raid_launcher",
     title: "Send Them Out",
-    text: "This is the raid launcher. Pick a scav, pick a map, and send them. Every map has a risk level — start with the Strip Mall or Riverside Marina. Higher risk means better loot and worse odds.",
-    highlight: ".raid-launcher-card",
+    text: "This is the raid launcher. Tap \"Open Raid Map\", pick a scav, pick a map, and send them. Every map has a risk level — start with the Strip Mall or Riverside Marina. Higher risk means better loot and worse odds.",
+    highlight: "#openRaidScreenBtn",
     action: "next",
   },
   {
@@ -15536,15 +15536,15 @@ const TUTORIAL_STEPS = [
   {
     id: "buildings",
     title: "Build and Expand",
-    text: "Click any building silhouette in the camp scene to build or upgrade it. The Infirmary is usually the first thing worth building — scavs get hurt, and without one they just have to wait it out. Buildings are bought with scrap and gold from raids.",
-    highlight: ".cf-buildings",
+    text: "Tap \"Open Camp\" to see your buildings, then tap any building silhouette there to build or upgrade it. The Infirmary is usually the first thing worth building — scavs get hurt, and without one they just have to wait it out. Buildings are bought with scrap and gold from raids.",
+    highlight: "#openCampScreenBtn",
     action: "next",
   },
   {
     id: "resources",
     title: "Resources",
-    text: "Scrap and gold come from raids. Meds heal injuries. Food gets consumed every day — if it runs out, morale drops. Intel unlocks research. Watch the resource bar at the top.",
-    highlight: ".resource-bar, .header-resources, [class*='resource']",
+    text: "Scrap and gold come from raids. Meds heal injuries. Food gets consumed every day — if it runs out, morale drops. Intel unlocks research. Keep an eye on your totals as you spend them across camp and raids.",
+    highlight: null,
     action: "next",
   },
   {

@@ -1582,6 +1582,10 @@ input[type="range"]::-moz-range-track {
   flex-direction: column;
   justify-content: flex-end;
   padding: 24px;
+  /* Grid item — same min-height:auto default as flex items (see
+     .rs-info-panel below); without this it refuses to shrink to its
+     grid row's actual height on a short screen. */
+  min-height: 0;
 }
 .rs-art-panel::before {
   content: '';
@@ -1629,6 +1633,17 @@ input[type="range"]::-moz-range-track {
 .rs-info-panel {
   overflow-y: auto;
   padding: 20px;
+  /* .rs-body is a CSS grid row, and grid items default to min-height:auto
+     just like flex items do (same bug already fixed on .left-stack/
+     .main-grid) — without this, this panel refuses to shrink below its
+     content's full height, so overflow-y:auto above never actually
+     engages. On a short phone-landscape screen the scav grid (and the
+     bottom launch bar) then just grows past .rs-body's overflow:hidden
+     edge and gets clipped, silently taking the scav cards along with it
+     — that's the actual cause of "can't select scavs" in Dungeons/Arena.
+     Harmless on desktop/tablet, where there's already enough height for
+     everything to fit without scrolling. */
+  min-height: 0;
 }
 
 .rs-scav-grid {
@@ -3714,6 +3729,31 @@ input[type="range"]::-moz-range-track {
   .cf-warehouse svg { width: 70px; }
   .cf-survivor { width: 34px; height: 64px; }
 }
+
+/* Region map dot labels: each dot's name normally sits inside the same
+   flex column as its clickable core (see .rs-map-dot), so the button's
+   own hit-box is exactly as wide as the name text. On a phone screen the
+   dots sit much closer together in absolute pixels than on
+   desktop/tablet, so two neighboring labels' text-width hit-boxes
+   overlap — a tap meant for one site's name lands on its neighbor's
+   button instead, which reads as "I can't send scavs on raids". Pulling
+   the label out of flow (position:absolute, pointer-events:none) on
+   phone shrinks the actual clickable box down to just the small dot
+   itself, so overlapping label *text* no longer overlaps anyone's tap
+   target — purely visual from here. Shrinking the font further reduces
+   how much the (now purely cosmetic) labels visually crowd each other. */
+@media (max-width: 840px), (max-height: 500px) {
+  .rs-map-dot { padding: 8px; }
+  .rs-map-dot-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 3px;
+    font-size: 6px;
+    pointer-events: none;
+  }
+}
 .cf-survivor-pose.walking .cf-leg-a { animation: cfLegA 0.45s ease-in-out infinite; }
 .cf-survivor-pose.walking .cf-leg-b { animation: cfLegB 0.45s ease-in-out infinite; }
 @keyframes cfLegA { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-22deg); } }
@@ -3819,21 +3859,17 @@ input[type="range"]::-moz-range-track {
   padding: 30px;
 }
 
-/* Below the desktop app's 1000px window floor, the panel column keeps its
-   place on the left and the camp scene keeps its place on the right —
-   same arrangement as desktop — just narrower, so both still fit
-   side-by-side on a phone screen instead of the scene getting hidden or
-   pushed below a scroll. The mobile stash button stays as an easy-to-tap
-   fallback alongside the scene's own stash chest, since that building is
-   necessarily small at this width. */
+/* Below the desktop app's 1000px window floor, the panel column narrows.
+   The camp scene is no longer part of this layout at all — it moved to
+   its own full-screen overlay (.camp-screen above) — so this just keeps
+   the Roster/Send a Raid/Camp panel column from staying desktop-wide on
+   a narrower window. */
 @media (max-width: 1000px) {
   .left-stack { width: 280px; }
-  .campfire-scene { min-width: 200px; }
 }
 
 @media (max-width: 600px) {
   .left-stack { width: 220px; }
-  .campfire-scene { min-width: 160px; }
 }
 
 /* Phones in landscape are typically short (350-450px tall) as well as
@@ -3850,8 +3886,95 @@ input[type="range"]::-moz-range-track {
      scene actually fit within one phone screen instead of scrolling. */
   .raid-launcher-card { padding: 14px 16px; }
   .raid-launcher-card .rl-status { margin-bottom: 8px; }
-  .left-stack { gap: 8px; }
   .panel-body { padding: 8px; }
+
+  /* Roster / Send a Raid / Camp used to stack vertically and scroll to
+     reach the bottom one on a short screen. Laying them out as a row
+     instead means all three are visible and reachable at once — no
+     scrolling needed at all on a phone's landscape height. Full width
+     (overriding the 280px/220px column widths above) so the three
+     panels can actually share the screen; overflow-x is just a safety
+     net in case a particularly narrow phone still can't fit all three. */
+  .left-stack {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .left-stack .panel {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .left-stack .panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Camp buildings: desktop/tablet's tighter, depth-clustered spacing
+     (see CAMP_BUILDINGS's comments in game.js — some closeness there is
+     intentional, for a foreground/background layered look) reads fine
+     at a wide screen's pixel scale, but the same percentage gaps
+     collapse into real overlap on a phone-narrow scene, especially
+     combined with each building's own scale multiplier (up to 1.44x).
+     Respreading left% evenly here (bottom/scale untouched, so the
+     depth effect itself is unchanged) and shrinking the sprite further
+     fixes the overlap without touching the shared desktop layout.
+     !important is required because left/bottom/scale are set inline
+     per-building in game.js. */
+  .cf-building svg { width: 44px; }
+  .cf-chest svg { width: 44px; }
+  [data-building-id="barracks"] { left: 14% !important; }
+  [data-building-id="infirmary"] { left: 23% !important; }
+  [data-building-id="deconTent"] { left: 32% !important; }
+  [data-building-id="radioTower"] { left: 41% !important; }
+  [data-building-id="farm"] { left: 50% !important; }
+  [data-building-id="scoutTower"] { left: 59% !important; }
+  [data-building-id="armory"] { left: 68% !important; }
+  [data-building-id="recYard"] { left: 77% !important; }
+  [data-building-id="workshop"] { left: 86% !important; }
+
+  /* Dungeons/Arena scav-pick cards, compacted a bit further so more of
+     the roster fits without scrolling on a short screen — on top of the
+     .rs-info-panel min-height:0 fix above, which is what actually makes
+     them reachable in the first place. */
+  .rs-scav-pick { padding: 6px 8px; gap: 3px; }
+  .rs-scav-pick .rsp-name { font-size: 7px; }
+
+  /* .rs-body's own @media(max-width:900px) rule (further up) stacks the
+     art panel above the info panel and gives the art panel a fixed
+     220px floor — a reasonable trade on an actual narrow PORTRAIT phone
+     browser, where there's plenty of spare height to stack into. This
+     app is landscape-locked on Android though (see AndroidManifest), so
+     "phone" here always means short, not necessarily narrow — stacking
+     two panels and reserving 220px for the top one can alone exceed the
+     ENTIRE available height, leaving the scav-pick grid squeezed into a
+     sliver a few px tall. Reverting to side-by-side columns here (same
+     shape as desktop, just without the width-triggered stack) lets both
+     panels use the full available height independently, so the scav
+     grid actually gets enough room to scroll through and be tapped —
+     this, combined with the .rs-info-panel min-height:0 fix above, is
+     what actually fixes "can't select scavs" in Dungeons/Arena. */
+  .rs-body { grid-template-columns: 1fr 1fr; }
+  .rs-art-panel { min-height: 0; border-right: 1px solid var(--border); border-bottom: none; }
+
+  /* Dungeons tab: the fixed-height dungeon card strip up top (130px tall
+     cards, full desktop padding) plus the header/tabs above it can alone
+     eat most of a phone-landscape screen's height, leaving .rs-body (the
+     actual group-forming/scav-picking area below) squeezed down to
+     almost nothing — same class of "technically present, practically
+     unreachable" bug as the Arena art panel above, just from a different
+     fixed-height culprit. Compacting the header, tabs, card strip, and
+     bottom bar here is what gives .rs-body enough real height to work
+     with on a short screen. */
+  .rs-header { padding: 8px 14px; }
+  .rs-tab { padding: 7px 10px 6px; }
+  .rs-strip-wrap { padding: 6px 10px 4px; }
+  .rs-map-card.dungeon-card { flex: 0 0 140px; height: 72px; }
+  .rs-bottom-bar { padding: 8px 14px; gap: 10px; }
 }
 
 /* ===== SKILL TREE (per scav) ===== */
