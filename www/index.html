@@ -3975,6 +3975,38 @@ input[type="range"]::-moz-range-track {
   .rs-strip-wrap { padding: 6px 10px 4px; }
   .rs-map-card.dungeon-card { flex: 0 0 140px; height: 72px; }
   .rs-bottom-bar { padding: 8px 14px; gap: 10px; }
+
+  /* Region tab's site popup (.rs-side-popup/.rs-popup-scroll): the same
+     "art panel gets a desktop-sized fixed floor" issue as Arena above,
+     just in a third spot — .rs-popup-scroll .rs-art-panel forces a
+     220px-tall image even though the popup itself only has the map
+     stage's already-limited height to work with on a phone. That alone
+     was consuming almost the entire popup, pushing "Choose a scav"
+     (and every scav card in it) below the fold — reachable only by
+     scrolling past what looked like the end of the popup, which reads
+     exactly like "I can't send scavs on raids" from the Region tab.
+     Shrinking the floor here — and the map dot label fix further up —
+     are what actually fixes site selection on the Region tab. */
+  .rs-popup-scroll .rs-art-panel { min-height: 0; padding: 14px; }
+  .rs-popup-scroll .rs-art-desc { margin-top: 4px; }
+  .rs-popup-scroll .rs-art-meta { margin-top: 6px; }
+
+  /* The route-planner blueprint (floor-plan room picker) renders above
+     "Choose a scav" in this same popup, and at its normal ~236px height
+     it's the single biggest reason a phone has to scroll so far to reach
+     the scav grid at all. Its own "⤢ Expand" button already opens a
+     full-size version for actually planning a route in detail, so a
+     shorter inline preview here is no real loss — it still shows the
+     layout and still responds to taps, just takes less of the popup's
+     limited height. */
+  .blueprint-svg { max-height: 110px; }
+  .blueprint-header { padding: 6px 8px 4px; }
+  .blueprint-legend { padding: 4px 8px; gap: 4px; }
+
+  /* Shared by Region's site popup and the Dungeons/Arena rs-body panel —
+     desktop's roomy 20px padding on every side adds up fast across a
+     popup with several stacked sections on a short screen. */
+  .rs-info-panel { padding: 10px; }
 }
 
 /* ===== SKILL TREE (per scav) ===== */
