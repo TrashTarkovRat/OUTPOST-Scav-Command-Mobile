@@ -14974,7 +14974,7 @@ function openBlueprintModal(map) {
           <span><span class="dot" style="background:var(--brass-bright);animation:none;"></span> ${escapeHtml(map.name).toUpperCase()} — ROUTE PLANNER</span>
           <button class="btn secondary" id="closeBlueprintModalBtn" style="padding:4px 12px;">Done</button>
         </div>
-        <div style="padding:16px;flex:1;overflow:auto;display:flex;flex-direction:column;">
+        <div class="blueprint-modal-scroll" style="padding:16px;flex:1;overflow:auto;display:flex;flex-direction:column;">
           <div class="blueprint-modal-inner">${renderMapBlueprint(map, selectedRooms)}</div>
         </div>
       </div>
@@ -15012,9 +15012,18 @@ function openBlueprintModal(map) {
             }
           }
         }
-        // Re-render the modal so the blueprint updates immediately
+        // Re-render the modal so the blueprint updates immediately. Like
+        // refreshRaidScreen() does for the inline popup, capture and
+        // restore the scroll container's scrollTop across the rebuild —
+        // replacing innerHTML recreates .blueprint-modal-scroll from
+        // scratch, which otherwise snaps it back to the top on every
+        // single room toggle.
+        const scrollEl = overlay.querySelector(".blueprint-modal-scroll");
+        const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
         overlay.innerHTML = renderModalContent();
         wireModalRooms();
+        const scrollElAfter = overlay.querySelector(".blueprint-modal-scroll");
+        if (scrollElAfter) scrollElAfter.scrollTop = scrollTop;
       });
     });
 

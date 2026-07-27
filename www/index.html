@@ -52,6 +52,20 @@
 }
 
 * { box-sizing: border-box; }
+/* Kills the translucent blue rectangle Android WebView/Chrome draws over
+   whatever you tap (buildings, scav cards, buttons — anything with a
+   click handler), since the game already gives its own visual feedback
+   for taps (hover/active/selected states throughout this stylesheet).
+   Doesn't affect desktop, where that highlight never shows anyway.
+   outline is a separate mechanism (keyboard/mouse focus ring rather than
+   the touch highlight) — reset on all elements too since a handful of
+   things here (buttons, the scav/building divs once clicked) can pick up
+   a focus ring on tap in some WebViews with no visible focus indicator
+   design of our own to show instead; :focus-visible is left alone so
+   actual keyboard navigation (a real accessibility need, unlike a touch
+   tap) still gets a visible ring where the stylesheet defines one. */
+* { -webkit-tap-highlight-color: transparent; }
+*:focus:not(:focus-visible) { outline: none; }
 html, body { margin: 0; padding: 0; }
 /* Stops mobile WebViews from auto-boosting text/layout size on narrow
    screens (Android's "Text Autosizer" heuristic) so the game renders at
